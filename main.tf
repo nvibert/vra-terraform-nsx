@@ -6,18 +6,6 @@ provider "nsxt" {
   enforcement_point    = "vmc-enforcementpoint"
 }
 
-data "nsxt_policy_vm" "nsxt_vm1" {
-  display_name = "nsxt-virtualmachine1"
-}
-
-resource "nsxt_policy_vm_tags" "vm1_tags" {
-  instance_id = data.nsxt_policy_vm.nsxt_vm1.instance_id
-  tag {
-    scope = "nico-scope"
-    tag   = "red"
-  }
-}
-
 resource "nsxt_policy_group" "mygroup2" {
   display_name = "my-policy-group - tags"
   description  = "Created from Terraform, using Tags"
