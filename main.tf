@@ -8,7 +8,7 @@ provider "nsxt" {
 
 resource "nsxt_policy_group" "mygroup2" {
   display_name = "my-policy-group - tags"
-  description  = "Created from Terraform by Nicco"
+  description  = "Created from Terraform by Nico"
   domain       = "cgw"
 
   criteria {
