@@ -20,3 +20,4 @@ variable "VMC_subnets" {
     Subnet14            = "14.14.14.0/24"
     Subnet14gw          = "14.14.14.1/24"
   }
+  }
