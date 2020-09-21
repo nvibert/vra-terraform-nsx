@@ -89,6 +89,28 @@ resource "nsxt_policy_group" "group14" {
   }
 }
 
+resource "nsxt_policy_group" "name-based group" {
+  display_name = "name-based group"
+  description  = "Terraform provisioned Group"
+  domain       = "cgw"
+  criteria {
+      condition {
+            key         = "Name"
+            member_type = "VirtualMachine"
+            operator    = "CONTAN"
+            value       = "photo"
+        }
+      condition {
+            key         = "OSName"
+            member_type = "VirtualMachine"
+            operator    = "CONTAINS"
+            value       = "Ubuntu"
+        }
+    }
+  
+  
+}
+
 /*==============
 Create NAT group
 ===============*/
