@@ -5,16 +5,6 @@ provider "nsxt" {
   enforcement_point    = "vmc-enforcementpoint"
 }
 
-variable "Subnet12"       {}
-variable "Subnet12gw"     {}
-variable "Subnet12dhcp"   {}
-variable "Subnet13"       {}
-variable "Subnet13gw"     {}
-variable "Subnet13dhcp"   {}
-variable "Subnet14"       {}
-variable "Subnet14gw"     {}
-variable "Photo_IP"       {}
-
 
 /*===========
 Get SDDC data
