@@ -174,6 +174,27 @@ resource "nsxt_policy_group" "Red_VMs" {
 /*=====================================
 Create DFW rules
 ======================================*/
+resource "nsxt_policy_security_policy" "Terraform_section_1" {
+  display_name = "Terraform_section"
+  description = "Terraform provisioned Security Policy"
+  category = "Application"
+  domain = "cgw"
+  locked = false
+  stateful = true
+  tcp_strict = false
+
+  rule {
+    display_name = "Micro-segmentation with Terraform"
+    source_groups = [
+      nsxt_policy_group.name-based-group.path]
+    destination_groups = [
+      nsxt_policy_group.name-based-group.path]
+    action = "DROP"
+    services = ["/infra/services/ICMP-ALL"]
+    logged = true
+  }
+}
+
 resource "nsxt_policy_security_policy" "Colors" {
   display_name = "Colors"
   description = "Terraform provisioned Security Policy"
