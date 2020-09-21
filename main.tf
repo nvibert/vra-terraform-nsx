@@ -2,68 +2,193 @@ provider "nsxt" {
   host                 = var.host
   vmc_token            = var.vmc_token
   allow_unverified_ssl = true
-  version              = "!= 1.1.2"
   enforcement_point    = "vmc-enforcementpoint"
 }
 
-resource "nsxt_policy_group" "mygroup2" {
-  display_name = "my-policy-group - tags"
-  description  = "Created from Terraform by Nico"
-  domain       = "cgw"
+variable "Subnet12"       {}
+variable "Subnet12gw"     {}
+variable "Subnet12dhcp"   {}
+variable "Subnet13"       {}
+variable "Subnet13gw"     {}
+variable "Subnet13dhcp"   {}
+variable "Subnet14"       {}
+variable "Subnet14gw"     {}
+variable "Photo_IP"       {}
 
+
+/*===========
+Get SDDC data
+============*/
+
+data "nsxt_policy_tier0_gateway" "vmc" {
+  display_name = "vmc"
+}
+
+data "nsxt_policy_transport_zone" "TZ" {
+  display_name = "vmc-overlay-tz"
+}
+
+
+/*==============
+Create segments
+===============*/
+
+resource "nsxt_policy_segment" "segment12" {
+  display_name        = "segment12"
+  description         = "Terraform provisioned Segment"
+  connectivity_path   = "/infra/tier-1s/cgw"
+  transport_zone_path = data.nsxt_policy_transport_zone.TZ.path
+  subnet {
+    cidr              = var.Subnet12gw
+    dhcp_ranges       = [var.Subnet12dhcp]
+  }
+}
+resource "nsxt_policy_segment" "segment13" {
+  display_name        = "segment13"
+  description         = "Terraform provisioned Segment"
+  connectivity_path   = "/infra/tier-1s/cgw"
+  transport_zone_path = data.nsxt_policy_transport_zone.TZ.path
+  subnet {
+    cidr = var.Subnet13gw
+    dhcp_ranges = [var.Subnet13dhcp]
+  }
+}
+resource "nsxt_policy_segment" "segment14" {
+  display_name        = "segment14"
+  description         = "Terraform provisioned Segment"
+  connectivity_path   = "/infra/tier-1s/cgw"
+  transport_zone_path = data.nsxt_policy_transport_zone.TZ.path
+  subnet {
+    cidr = var.Subnet14gw
+  }
+}
+
+/*===================
+Create Network Groups
+====================*/
+
+
+resource "nsxt_policy_group" "group12" {
+  display_name = "tf-group12"
+  description  = "Terraform provisioned Group"
+  domain       = "cgw"
+  criteria {
+    ipaddress_expression {
+      ip_addresses = [var.Subnet12]
+    }
+  }
+}
+resource "nsxt_policy_group" "group13" {
+  display_name = "tf-group13"
+  description  = "Terraform provisioned Group"
+  domain       = "cgw"
+  criteria {
+    ipaddress_expression {
+      ip_addresses = [var.Subnet13]
+    }
+  }
+}
+resource "nsxt_policy_group" "group14" {
+  display_name = "tf-group14"
+  description  = "Terraform provisioned Group"
+  domain       = "cgw"
+  criteria {
+    ipaddress_expression {
+      ip_addresses = [var.Subnet14]
+    }
+  }
+}
+
+/*==============
+Create NAT group
+===============*/
+resource "nsxt_policy_group" "Photo_Private_IP" {
+  display_name = "Photo_Private_IP"
+  description  = "Terraform provisioned Group"
+  domain       = "cgw"
+  criteria {
+    ipaddress_expression {
+      ip_addresses = [cidrhost(var.Subnet13, 200)]
+    }
+  }
+}
+
+/*=====================================
+Create NAT rule
+======================================*/
+resource "nsxt_policy_nat_rule" "PhotoApp_NAT" {
+  display_name         = "PhotoApp_NAT"
+  action               = "DNAT"
+  source_networks      = []
+  destination_networks = [var.Photo_IP]
+  translated_networks  = [cidrhost(var.Subnet13, 200)]
+  gateway_path         = "/infra/tier-1s/cgw"
+
+  logging              = false
+  firewall_match       = "MATCH_INTERNAL_ADDRESS"
+}
+
+/*=====================================
+Create Security Group based on NSX Tags
+======================================*/
+resource "nsxt_policy_group" "Blue_VMs" {
+  display_name = "Blue_VMs"
+  description = "Terraform provisioned Group"
+  domain       = "cgw"
   criteria {
     condition {
       key = "Tag"
       member_type = "VirtualMachine"
       operator = "EQUALS"
-      value = "red"
+      value = "Blue|NSX_tag"
     }
   }
 }
 
-data "nsxt_policy_service" "dns_service" {
-  display_name = "DNS"
-}
- 
-
-resource "nsxt_policy_security_policy" "policy2" {
+resource "nsxt_policy_group" "Red_VMs" {
+  display_name = "Red_VMs"
+  description  = "Terraform provisioned Group"
   domain       = "cgw"
-  display_name = "policy2"
-  description  = "Terraform provisioned Security Policy"
-  category     = "Application"
-
-  rule {
-    display_name  = "rule name"
-    source_groups = ["${nsxt_policy_group.mygroup2.path}"]
-    action        = "DROP"
-    services      = ["${nsxt_policy_service.nico-service_l4port2.path}"]
-    logged        = true
+  criteria {
+    condition {
+      key = "Tag"
+      member_type = "VirtualMachine"
+      operator = "EQUALS"
+      value = "Red|NSX_tag"
+    }
   }
 }
 
-resource "nsxt_policy_security_policy" "policy_existing_service" {
-  domain       = "cgw"
-  display_name = "policy_using_existing_service"
-  description  = "Terraform provisioned Security Policy"
-  category     = "Application"
+/*=====================================
+Create DFW rules
+======================================*/
+resource "nsxt_policy_security_policy" "Colors" {
+  display_name = "Colors"
+  description = "Terraform provisioned Security Policy"
+  category = "Application"
+  domain = "cgw"
+  locked = false
+  stateful = true
+  tcp_strict = false
 
   rule {
-    display_name  = "rule name"
-    source_groups = ["${nsxt_policy_group.mygroup2.path}"]
-    action        = "DROP"
-    services      = [data.nsxt_policy_service.dns_service.path]
-    logged        = true
+    display_name = "Blue2Red"
+    source_groups = [
+      nsxt_policy_group.Blue_VMs.path]
+    destination_groups = [
+      nsxt_policy_group.Red_VMs.path]
+    action = "DROP"
+    services = ["/infra/services/ICMP-ALL"]
+    logged = true
   }
-}
-
-resource "nsxt_policy_service" "nico-service_l4port2" {
-  description  = "L4 ports service provisioned by Terraform"
-  display_name = "service-s2"
-
-  l4_port_set_entry {
-    display_name      = "TCP82"
-    description       = "TCP port 82 entry"
-    protocol          = "TCP"
-    destination_ports = ["82"]
+  rule {
+    display_name = "Red2Blue"
+    source_groups = [
+      nsxt_policy_group.Red_VMs.path]
+    destination_groups = [
+      nsxt_policy_group.Blue_VMs.path]
+    action = "DROP"
+    services = ["/infra/services/ICMP-ALL"]
+    logged = true
   }
 }
