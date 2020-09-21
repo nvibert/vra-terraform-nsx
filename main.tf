@@ -89,7 +89,7 @@ resource "nsxt_policy_group" "group14" {
   }
 }
 
-resource "nsxt_policy_group" "name-based group" {
+resource "nsxt_policy_group" "name-based-group" {
   display_name = "name-based group"
   description  = "Terraform provisioned Group"
   domain       = "cgw"
