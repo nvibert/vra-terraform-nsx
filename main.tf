@@ -97,7 +97,7 @@ resource "nsxt_policy_group" "name-based-group" {
       condition {
             key         = "Name"
             member_type = "VirtualMachine"
-            operator    = "CONTAN"
+            operator    = "CONTAINS"
             value       = "photo"
         }
       condition {
